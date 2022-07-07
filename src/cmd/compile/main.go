@@ -44,6 +44,10 @@ func main() {
 	// disable timestamps for reproducible output
 	log.SetFlags(0)
 	log.SetPrefix("compile: ")
+	
+	if buildcfg.GOARCH == "arc" {
+		base.Exit(0)
+	}
 
 	buildcfg.Check()
 	archInit, ok := archInits[buildcfg.GOARCH]

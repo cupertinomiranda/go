@@ -60,6 +60,7 @@ var (
 
 // The known architectures.
 var okgoarch = []string{
+	"arc",
 	"386",
 	"amd64",
 	"arm",
@@ -1433,9 +1434,13 @@ func cmdbootstrap() {
 		// Skip the cmd tools for js/wasm. They're not usable.
 		targets = targets[:1]
 	}
+	xprintf("HERE0")
 	goInstall(goBootstrap, targets...)
+	xprintf("HERE1")
 	checkNotStale(goBootstrap, targets...)
+	xprintf("HERE2")
 	checkNotStale(cmdGo, targets...)
+	xprintf("HERE3")
 	if debug {
 		run("", ShowOutput|CheckExit, pathf("%s/compile", tooldir), "-V=full")
 		run("", ShowOutput|CheckExit, pathf("%s/buildid", tooldir), pathf("%s/pkg/%s_%s/runtime/internal/sys.a", goroot, goos, goarch))
@@ -1503,7 +1508,12 @@ func goInstall(goBinary string, args ...string) {
 }
 
 func goCmd(goBinary string, cmd string, args ...string) {
+	goarch := os.Getenv("GOARCH")
+	xprintf("GOARCH=%s\n", goarch)
 	goCmd := []string{goBinary, cmd, "-gcflags=all=" + gogcflags, "-ldflags=all=" + goldflags}
+	if goarch == "arc" {
+		goCmd = []string{goBinary, cmd, "-compiler=gccgo", "-gccgoflags=-mlong-calls"}
+	}
 	if vflag > 0 {
 		goCmd = append(goCmd, "-v")
 	}
@@ -1513,14 +1523,25 @@ func goCmd(goBinary string, cmd string, args ...string) {
 		goCmd = append(goCmd, "-p=1")
 	}
 
+	xprintf(" goCmd = %s\n", goCmd)
+
 	run(workdir, ShowOutput|CheckExit, append(goCmd, args...)...)
 }
 
 func checkNotStale(goBinary string, targets ...string) {
+	goarch := os.Getenv("GOARCH")
+
+	cflags := "-gcflags=all=" + gogcflags
+	ldflags := "-ldflags=all=" + goldflags
+	if goarch == "arc" {
+		cflags = "-compiler=gccgo"
+		ldflags = "-gccgoflags=-mlong-calls"
+	}
+
 	out := run(workdir, CheckExit,
 		append([]string{
 			goBinary,
-			"list", "-gcflags=all=" + gogcflags, "-ldflags=all=" + goldflags,
+			"list", cflags, ldflags,
 			"-f={{if .Stale}}\tSTALE {{.ImportPath}}: {{.StaleReason}}{{end}}",
 		}, targets...)...)
 	if strings.Contains(out, "\tSTALE ") {
@@ -1552,6 +1573,7 @@ var cgoEnabled = map[string]bool{
 	"freebsd/arm":     true,
 	"freebsd/arm64":   true,
 	"illumos/amd64":   true,
+	"linux/arc":       true,
 	"linux/386":       true,
 	"linux/amd64":     true,
 	"linux/arm":       true,

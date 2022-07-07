@@ -2624,6 +2624,8 @@ func (b *Builder) gccSupportsFlag(compiler []string, flag string) bool {
 // gccArchArgs returns arguments to pass to gcc based on the architecture.
 func (b *Builder) gccArchArgs() []string {
 	switch cfg.Goarch {
+	case "arc":
+		return []string{"-mlong-calls"}
 	case "386":
 		return []string{"-m32"}
 	case "amd64":
